@@ -1,0 +1,6 @@
+{
+  "name": "The Viking Age in Britain",
+  "description": "An interactive digital medieval manuscript chronicle about the British Viking Age (793-1066) with immersive left-right page layouts, customizable illustrations, and Gemini AI-powered historical explanations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
