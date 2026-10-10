@@ -42,6 +42,8 @@ function suppressHmrPlugin(): Plugin {
 
 export default defineConfig(() => {
   return {
+    // Deploy base path: "/" by default, e.g. BASE_PATH=/vikings/ for GitHub Pages project sites
+    base: process.env.BASE_PATH || '/',
     plugins: [suppressHmrPlugin(), react(), tailwindcss(), pruneUnusedPublicPlugin()],
     resolve: {
       alias: {

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { playParchmentTurnSound } from "./utils/sound";
+import { asset } from "./utils/asset";
 
 // Hotspot keyword trigger maps (mapping text phrases to Hotspot IDs for easy lookup)
 const KEYWORD_MAPS: { [key: string]: string } = {
@@ -237,7 +238,7 @@ export default function App() {
   const activeChapter = chaptersList[activeChapterIndex];
   const activePageIndexNormalized = Math.min(activePageIndex, activeChapter.pages.length - 1);
   const activePage = activeChapter.pages[activePageIndexNormalized];
-  const activeImage = activePage.image;
+  const activeImage = asset(activePage.image);
   const activeHotspots = activePage.hotspots;
 
   // Typography helpers: Gothic blackletter for Latin, refined Song serif for Chinese
@@ -269,7 +270,7 @@ export default function App() {
       if (src) {
         const img = new Image();
         img.decoding = "async";
-        img.src = src;
+        img.src = asset(src);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -540,7 +541,7 @@ export default function App() {
           setSelectedHotspot(null);
           triggerPageTurnSound();
         }}
-        coverImage="/images/viking_cover_1784019389283.jpg"
+        coverImage={asset("/images/viking_cover_1784019389283.jpg")}
         language={language}
         onLanguageChange={setLanguage}
         theme={theme}
@@ -1062,7 +1063,7 @@ export default function App() {
                   <div className="relative w-full max-w-[260px] sm:max-w-[340px] aspect-[3/4] p-2 sm:p-2.5 bg-[#fbf6ea] rounded-[6px] ring-1 ring-gilt/40 shadow-[0_28px_44px_-26px_rgba(42,30,18,0.7),0_2px_6px_rgba(42,30,18,0.10)] group">
                     <div className="w-full h-full rounded-[3px] overflow-hidden relative bg-stone-900 ring-1 ring-black/10">
                       <img
-                        src="/images/viking_timeline_1784019399632.jpg"
+                        src={asset("/images/viking_timeline_1784019399632.jpg")}
                         alt="The Viking Chronicle Frontispiece"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.03]"
@@ -1160,7 +1161,7 @@ export default function App() {
                     /* ================== CHAPTER 2 TIMELINE EVENT DETAIL DISPLAY ================== */
                     (() => {
                       const currentEvent = selectedTimelineEvent || TIMELINE_ERAS[0].subTrack[0];
-                      const currentEventImage = currentEvent.image || "/images/viking_timeline_1784019399632.jpg";
+                      const currentEventImage = asset(currentEvent.image || "/images/viking_timeline_1784019399632.jpg");
 
                       return (
                         <div className="w-full flex-1 flex flex-col justify-between h-full select-none relative z-10" id="timeline-detail-module">

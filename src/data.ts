@@ -203,7 +203,7 @@ export const CHAPTERS_DATA: Chapter[] = [
           "From his hidden marsh island fortress, Alfred orchestrated a brilliant, asymmetric guerrilla campaign. He built secret wooden bridges, executed lightning raids against Danish outposts, and sent secret riders across the countryside to summon the local peasant militia (fyrd). In May 878, Alfred assembled his forces at Egbert's Stone and engaged Guthrum's veteran army at the Battle of Edington (Ethandun), smashing the Viking line with a desperate Saxon shield wall.",
           "The decisive Saxon victory led directly to the historic Treaty of Wedmore. Guthrum surrendered, agreed to permanently withdraw his forces from Wessex, and accepted Christian baptism, with Alfred acting as his godfather. This treaty established the historic Danelaw border along Watling Street, partitioning England into Saxon and Viking legal spheres, which permanently preserved the English language, Alfredian laws, and Saxon identity from absolute destruction."
         ],
-        "image": "/images/admin/timeline_chronicle_alfred_defense_1784536487092.png",
+        "image": "/images/admin/timeline_chronicle_alfred_defense_1784536487092.jpg",
         "hotspots": [
           {
             "id": "night_raid_chippenham",
