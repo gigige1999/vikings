@@ -6,37 +6,83 @@
 import { motion } from "motion/react";
 import { Sun, Moon } from "lucide-react";
 
-const ELDER_FUTHARK = "ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ ᛏ ᛒ ᛖ ᛗ ᛚ ᛜ ᛞ ᛟ";
+// Gunwale curve shared by the hull, shields and oars
+const gunwaleY = (x: number) => 113 + 7 * (1 - ((x - 120) / 76) ** 2);
+const SHIELD_XS = [62, 76, 90, 104, 118, 132, 146, 160, 174];
 
-// Gilt-tooled Vegvísir: eight staves radiating from a centre, ringed by the Elder Futhark
-function Vegvisir({ className = "" }: { className?: string }) {
-  const ends = [
-    // crossbars
-    <g key="a"><line x1="0" y1="-14" x2="0" y2="-70" /><line x1="-8" y1="-56" x2="8" y2="-56" /><line x1="-8" y1="-65" x2="8" y2="-65" /></g>,
-    // trident
-    <g key="b"><line x1="0" y1="-14" x2="0" y2="-72" /><path d="M-9 -72 V-60 H9 V-72" /></g>,
-    // ring
-    <g key="c"><line x1="0" y1="-14" x2="0" y2="-62" /><circle cx="0" cy="-68" r="5.5" /></g>,
-    // arrow
-    <g key="d"><line x1="0" y1="-14" x2="0" y2="-70" /><path d="M-8 -62 L0 -72 L8 -62" /><line x1="-5" y1="-46" x2="5" y2="-46" /></g>,
-  ];
+// Gilt line-art drakkar: dragon prow, spiral stern, striped sail, shield row and oars over stylised waves
+function Longship({ className = "" }: { className?: string }) {
+  const sail = "M78 30 L162 30 C167 58 166 84 160 104 L80 104 C74 84 73 58 78 30 Z";
   return (
-    <svg viewBox="-100 -100 200 200" className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg viewBox="0 0 240 200" className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <defs>
-        <path id="futhark-ring" d="M0,-86 A86,86 0 1,1 -0.01,-86" />
+        <clipPath id="sail-clip"><path d={sail} /></clipPath>
       </defs>
-      <circle r="94" strokeWidth="1.2" opacity="0.8" />
-      <circle r="79" strokeWidth="0.8" opacity="0.55" />
-      <text fill="currentColor" stroke="none" fontSize="9.2" letterSpacing="2.2" opacity="0.75" style={{ fontFamily: "'Apple Symbols','Segoe UI Historic','Noto Sans Runic',serif" }}>
-        <textPath href="#futhark-ring" startOffset="0" textLength="528" lengthAdjust="spacing">{ELDER_FUTHARK}</textPath>
-      </text>
-      <g strokeWidth="2.6">
-        {Array.from({ length: 8 }, (_, i) => (
-          <g key={i} transform={`rotate(${i * 45})`}>{ends[i % 4]}</g>
+
+      {/* Sun disc behind the sail */}
+      <circle cx="120" cy="72" r="66" strokeWidth="0.8" opacity="0.3" />
+      <circle cx="120" cy="72" r="58" strokeWidth="0.6" opacity="0.18" strokeDasharray="2 4" />
+
+      {/* Rigging */}
+      <g strokeWidth="0.9" opacity="0.6">
+        <line x1="120" y1="14" x2="198" y2="100" />
+        <line x1="120" y1="14" x2="42" y2="102" />
+      </g>
+
+      {/* Mast, yard and pennant */}
+      <line x1="120" y1="12" x2="120" y2="118" strokeWidth="2.4" />
+      <line x1="74" y1="29" x2="166" y2="29" strokeWidth="2.4" />
+      <path d="M120 12 L134 16 L120 20" strokeWidth="1.4" />
+
+      {/* Striped square sail */}
+      <g clipPath="url(#sail-clip)">
+        {[0, 1, 2, 3].map((i) => (
+          <rect key={i} x={80 + i * 21} y="28" width="10.5" height="80" fill="currentColor" stroke="none" opacity="0.32" />
         ))}
       </g>
-      <circle r="9" strokeWidth="2.2" />
-      <circle r="2.6" fill="currentColor" stroke="none" />
+      <path d={sail} strokeWidth="2" />
+      <path d="M80 67 C100 71 140 71 160 67" strokeWidth="0.8" opacity="0.5" />
+
+      {/* Oars */}
+      <g strokeWidth="1.3" opacity="0.8">
+        {SHIELD_XS.filter((_, i) => i % 2 === 0).map((x) => (
+          <line key={x} x1={x + 6} y1={gunwaleY(x) + 8} x2={x - 6} y2={154} />
+        ))}
+      </g>
+
+      {/* Hull, strakes, dragon prow and spiral stern */}
+      <path
+        d="M36 80 C33 102 42 120 62 128 C92 140 148 140 178 128 C198 120 207 102 204 78 C192 104 156 114 120 114 C84 114 48 104 36 80 Z"
+        fill="#24190f"
+        stroke="none"
+      />
+      <path d="M36 80 C33 102 42 120 62 128 C92 140 148 140 178 128 C198 120 207 102 204 78" strokeWidth="2.4" />
+      <path d="M204 78 C192 104 156 114 120 114 C84 114 48 104 36 80" strokeWidth="1.6" />
+      <path d="M48 114 C82 126 158 126 192 114" strokeWidth="1.4" opacity="0.8" />
+      <path d="M58 124 C90 134 150 134 182 124" strokeWidth="1" opacity="0.55" />
+      <path d="M204 78 C203 62 210 48 221 45 C230 43 234 51 228 55 L222 56" strokeWidth="2.4" />
+      <path d="M222 45 L226 38 L224 46" strokeWidth="1.4" />
+      <circle cx="224.5" cy="49.5" r="1.4" fill="currentColor" stroke="none" />
+      <path d="M36 80 C34 63 26 53 18 55 C11 57 11 67 18 67 C23 67 24 61 20 60" strokeWidth="2.4" />
+
+      {/* Shield row */}
+      {SHIELD_XS.map((x, i) => {
+        const y = gunwaleY(x);
+        return (
+          <g key={x}>
+            <circle cx={x} cy={y} r="6.2" fill="#24190f" strokeWidth="1.6" />
+            <path d={i % 2 ? `M${x - 6} ${y} H${x + 6}` : `M${x} ${y - 6} V${y + 6}`} strokeWidth="0.8" opacity="0.6" />
+            <circle cx={x} cy={y} r="1.5" fill="currentColor" stroke="none" />
+          </g>
+        );
+      })}
+
+      {/* Waves */}
+      <g strokeWidth="1.2">
+        <path d="M14 150 q12 -7 24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0" opacity="0.75" />
+        <path d="M26 162 q12 -6 24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0" opacity="0.45" />
+        <path d="M44 173 q12 -5 24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0" opacity="0.25" />
+      </g>
     </svg>
   );
 }
@@ -136,9 +182,21 @@ export default function BookCover({ onOpen, language, onLanguageChange, theme, o
         {/* Single tooled gilt frame */}
         <div className="absolute inset-4 sm:inset-5 border border-gilt-soft/20 rounded-[2px] pointer-events-none" />
 
-        {/* Vegvísir — the Norse wayfinder */}
-        <div className="absolute inset-0 grid place-items-center pointer-events-none">
-          <Vegvisir className="w-[62%] h-auto text-[#cfae74] transition-transform duration-[1400ms] ease-out group-hover:scale-[1.03] drop-shadow-[0_1px_0_rgba(0,0,0,0.6)]" />
+        {/* Title line at the head of the cover */}
+        <div className="absolute top-10 sm:top-12 inset-x-0 flex flex-col items-center gap-2.5 px-10 pointer-events-none">
+          <p className={`${isZh ? "font-zh-serif font-semibold text-[17px] sm:text-[19px] tracking-[0.42em] pl-[0.42em]" : "font-gothic text-[21px] sm:text-[23px] tracking-wide"} text-[#d9bb84] text-center leading-none`}>
+            {isZh ? "海上来的北方人" : "Se Norþmenn"}
+          </p>
+          <div className="flex items-center gap-2 text-gilt-soft/45">
+            <span className="h-px w-8 bg-current" />
+            <span className="font-display text-[8.5px] tracking-[0.5em] pl-[0.5em]">{isZh ? "SE NORÞMENN" : "THE NORTHMEN"}</span>
+            <span className="h-px w-8 bg-current" />
+          </div>
+        </div>
+
+        {/* Longship — the emblem of the sea-raiders */}
+        <div className="absolute inset-0 grid place-items-center pointer-events-none pt-4">
+          <Longship className="w-[84%] h-auto text-[#cfae74] transition-transform duration-[1400ms] ease-out group-hover:-translate-y-1 drop-shadow-[0_1px_0_rgba(0,0,0,0.6)]" />
         </div>
 
         {/* Quiet foot line */}
