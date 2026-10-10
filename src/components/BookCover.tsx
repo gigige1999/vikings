@@ -7,190 +7,230 @@ import { motion } from "motion/react";
 import { Sun, Moon } from "lucide-react";
 
 const LEATHER = "#24190f";
-const DISC_R = 70;
-const HORIZON = 26;
-const SHIELD_XS = [-48, -36, -24, -12, 0, 12, 24, 36, 48];
-const gunwale = (x: number) => 9 * (1 - (x / 64) ** 2);
+const GOLD = "url(#emblem-gold)";
+const DISC_R = 73;
+const f = (n: number) => n.toFixed(1);
 
-// Longship silhouette (hull, dragon prow, curled stern, mast, sail, pennant) in a single colour
-function ShipShape({ color }: { color: string }) {
+/* ---------- Knotwork ring: two strands woven over / under ---------- */
+const KNOT_R = 84.5;
+const KNOT_AMP = 4.3;
+const KNOT_N = 30;
+
+function strand(phase: number, t0 = 0, t1 = Math.PI * 2, steps = 900) {
+  const pts: string[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = t0 + ((t1 - t0) * i) / steps;
+    const r = KNOT_R + KNOT_AMP * Math.sin(KNOT_N * t + phase);
+    pts.push(`${i ? "L" : "M"}${f(r * Math.sin(t))} ${f(-r * Math.cos(t))}`);
+  }
+  return pts.join("");
+}
+const STRAND_A = strand(0) + "Z";
+const STRAND_B = strand(Math.PI) + "Z";
+// Strand A re-drawn on top at every other crossing so the two strands interlace
+const STRAND_A_OVER = Array.from({ length: KNOT_N }, (_, k) => {
+  const tc = (2 * k * Math.PI) / KNOT_N;
+  const span = (0.42 * Math.PI) / KNOT_N;
+  return strand(0, tc - span, tc + span, 24);
+}).join("");
+
+function Knot({ d }: { d: string }) {
   return (
-    <g fill={color} stroke={color} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M-64 0 C-44 12 44 12 64 0 C58 18 34 27 0 27 C-34 27 -58 18 -64 0 Z" strokeWidth="1" />
-      {/* Dragon prow */}
-      <path d="M58 4 C69 -5 72 -23 76 -36 C79 -45 88 -48 91 -41 C92 -36 88 -34 84 -36" fill="none" strokeWidth="4.6" />
-      <path d="M86 -45 L90 -54 L91 -44 Z" strokeWidth="1.2" />
-      {/* Curled stern */}
-      <path d="M-58 4 C-69 -5 -72 -23 -77 -34 C-81 -43 -92 -43 -93 -35 C-94 -28 -86 -26 -84 -32" fill="none" strokeWidth="4.6" />
-      {/* Mast, yard, pennant */}
-      <rect x="-1.6" y="-62" width="3.2" height="66" strokeWidth="0" />
-      <rect x="-39" y="-58.5" width="78" height="2.6" rx="1.3" strokeWidth="0" />
-      <path d="M1 -62 L13 -58.5 L1 -55 Z" strokeWidth="0.8" />
-      {/* Square sail */}
-      <path d="M-36 -56 L36 -56 C40 -37 40 -19 34 -2 L-34 -2 C-40 -19 -40 -37 -36 -56 Z" strokeWidth="1" />
-    </g>
+    <>
+      <path d={d} fill="none" stroke={LEATHER} strokeWidth="4.6" strokeLinecap="round" />
+      <path d={d} fill="none" stroke={GOLD} strokeWidth="2.2" strokeLinecap="round" />
+    </>
   );
 }
 
-type WaveRow = { base: number; w: number; h: number; start: number };
-
-// Three rows of curling Norse scroll-waves, from far (small) to near (large)
+/* ---------- Bold curling waves (dark strokes on gold) ---------- */
+type WaveRow = { base: number; w: number; h: number; start: number; sw: number };
 const WAVE_ROWS: WaveRow[] = [
-  { base: 42, w: 32, h: 14, start: -100 },
-  { base: 58, w: 42, h: 19, start: -118 },
-  { base: 80, w: 54, h: 27, start: -106 },
+  { base: 38, w: 30, h: 11, start: -96, sw: 2.6 },
+  { base: 58, w: 40, h: 16, start: -112, sw: 3.4 },
 ];
 
-const f = (n: number) => n.toFixed(1);
-
-function waveRowPaths({ base: B, w, h, start }: WaveRow) {
+function wavePaths({ base: B, w, h, start }: WaveRow) {
   let edge = `M${f(start)} ${f(B)}`;
   const curls: string[] = [];
-  const foam: string[] = [];
-  let x0 = start;
-  for (; x0 < 112; x0 += w) {
+  for (let x0 = start; x0 < 110; x0 += w) {
     const X = (k: number) => f(x0 + k * w);
     const Y = (k: number) => f(B - k * h);
     edge +=
       ` C${X(0.3)} ${Y(0)} ${X(0.4)} ${Y(1)} ${X(0.62)} ${Y(1)}` +
       ` C${X(0.84)} ${Y(1)} ${X(0.92)} ${Y(0.62)} ${X(0.86)} ${Y(0.42)}` +
       ` C${X(0.9)} ${Y(0.16)} ${X(0.95)} ${Y(0)} ${X(1)} ${Y(0)}`;
-    // Spiral curl tucked under the breaking lip
     curls.push(
-      `M${X(0.86)} ${Y(0.42)} C${X(0.78)} ${Y(0.18)} ${X(0.58)} ${Y(0.3)} ${X(0.62)} ${Y(0.56)}` +
-        ` C${X(0.65)} ${Y(0.76)} ${X(0.81)} ${Y(0.7)} ${X(0.76)} ${Y(0.5)}`
+      `M${X(0.86)} ${Y(0.42)} C${X(0.78)} ${Y(0.16)} ${X(0.56)} ${Y(0.3)} ${X(0.6)} ${Y(0.58)}` +
+        ` C${X(0.63)} ${Y(0.8)} ${X(0.8)} ${Y(0.72)} ${X(0.75)} ${Y(0.5)}`
     );
-    // Wind-combed lines on the back of the wave
-    foam.push(`M${X(0.08)} ${Y(0.05)} C${X(0.28)} ${Y(0.1)} ${X(0.36)} ${Y(0.6)} ${X(0.52)} ${Y(0.8)}`);
-    foam.push(`M${X(0.2)} ${Y(-0.02)} C${X(0.36)} ${Y(0.02)} ${X(0.44)} ${Y(0.38)} ${X(0.56)} ${Y(0.52)}`);
   }
-  const fill = `${edge} L${f(x0)} 120 L${f(start)} 120 Z`;
-  return { edge, fill, curls: curls.join(" "), foam: foam.join(" ") };
+  return { edge, curls: curls.join(" ") };
+}
+const WAVES = WAVE_ROWS.map((r) => ({ ...wavePaths(r), sw: r.sw }));
+
+/* ---------- Ship geometry ---------- */
+const SAIL = "M-36 -56 Q-3 -61 30 -56 C43 -40 44 -18 34 -2 Q-2 3 -36 -2 C-31 -20 -31 -38 -36 -56 Z";
+const HULL = "M-60 2 C-40 13 38 13 56 2 C52 18 30 27 -2 27 C-32 27 -54 18 -60 2 Z";
+const SHIELDS = [-32, -16, 0, 16, 32];
+
+function Diamond({ x, y, s = 5 }: { x: number; y: number; s?: number }) {
+  return <rect x={x - s / 2} y={y - s / 2} width={s} height={s} fill={GOLD} stroke={LEATHER} strokeWidth="1" transform={`rotate(45 ${x} ${y})`} />;
 }
 
-const WAVES = WAVE_ROWS.map(waveRowPaths);
-
-// Braided cable ring (two interlaced sinusoids) — a classic Norse border
-function braid(r: number, amp: number, n: number, phase: number) {
-  const pts: string[] = [];
-  for (let i = 0; i <= 720; i++) {
-    const t = (i / 720) * Math.PI * 2;
-    const rr = r + amp * Math.sin(n * t + phase);
-    pts.push(`${i ? "L" : "M"}${f(rr * Math.sin(t))} ${f(-rr * Math.cos(t))}`);
-  }
-  return pts.join("") + "Z";
-}
-const BRAID_A = braid(81, 2.6, 36, 0);
-const BRAID_B = braid(81, 2.6, 36, Math.PI);
-
-function Waves({ fill, line, only }: { fill?: string; line: string; only?: number[] }) {
+function DragonProw() {
+  const neck = "M50 8 C64 2 71 -10 73 -26 C74 -36 76 -42 81 -47";
+  const head =
+    "M75 -44 C74 -56 80 -64 88 -67 L89 -77 L94 -67 L98 -74 L99 -65" +
+    " C104 -64 108 -62 112 -58.5 L112.5 -54 L104 -53 L97 -51 L110.5 -46.5 L108.5 -42" +
+    " C100 -40 90 -38 81 -36 Z";
   return (
-    <>
-      {WAVES.map((w, i) =>
-        only && !only.includes(i) ? null : (
-          <g key={i}>
-            {fill && <path d={w.fill} fill={fill} />}
-            <path d={w.edge} fill="none" stroke={line} strokeWidth={1.4 + i * 0.45} strokeLinecap="round" strokeLinejoin="round" />
-            <path d={w.curls} fill="none" stroke={line} strokeWidth={1.2 + i * 0.4} strokeLinecap="round" />
-            <path d={w.foam} fill="none" stroke={line} strokeWidth={0.75 + i * 0.2} strokeLinecap="round" opacity="0.7" />
-          </g>
-        )
-      )}
-    </>
+    <g strokeLinecap="round" strokeLinejoin="round">
+      {/* Neck */}
+      <path d={neck} fill="none" stroke={LEATHER} strokeWidth="13" />
+      <path d={neck} fill="none" stroke={GOLD} strokeWidth="9" />
+      <path d={neck} fill="none" stroke={LEATHER} strokeWidth="1.4" strokeDasharray="0.1 3.4" />
+      {/* Mane spikes */}
+      {[
+        [69, -14],
+        [70, -23],
+        [71, -32],
+        [73, -41],
+      ].map(([x, y]) => (
+        <path key={y} d={`M${x} ${y} L${x - 9} ${y - 5} L${x - 1} ${y - 7.5} Z`} fill={GOLD} stroke={LEATHER} strokeWidth="1.2" />
+      ))}
+      {/* Head with open jaws */}
+      <path d={head} fill={GOLD} stroke={LEATHER} strokeWidth="1.9" />
+      {/* Teeth */}
+      <path d="M100 -52.4 L101.6 -50.2 L103.2 -52.7 L104.8 -50.4 L106.4 -52.9" fill="none" stroke={LEATHER} strokeWidth="0.9" />
+      <path d="M100.5 -49.2 L102.2 -51.2 L103.8 -48.6 L105.5 -50.7 L107.2 -47.9" fill="none" stroke={LEATHER} strokeWidth="0.9" />
+      {/* Eye, brow, nostril, cheek scroll */}
+      <path d="M88 -62.5 C91.5 -64.5 96 -64 98.5 -61.5" fill="none" stroke={LEATHER} strokeWidth="1.4" />
+      <circle cx="93.5" cy="-59.2" r="2.3" fill={LEATHER} />
+      <circle cx="94.2" cy="-59.9" r="0.7" fill="#f2dcaa" />
+      <circle cx="110" cy="-56.6" r="1" fill={LEATHER} />
+      <path d="M80 -47 C82 -42 88 -42 89 -46.5 C89.6 -49.5 85.5 -50.2 85 -47.4" fill="none" stroke={LEATHER} strokeWidth="1.2" />
+      <path d="M84 -38.5 C91 -40.5 99 -43 108 -45" fill="none" stroke={LEATHER} strokeWidth="0.9" opacity="0.8" />
+    </g>
   );
 }
 
-// Gilt emblem: a setting sun, a longship riding great scroll-waves, Odin's two ravens
+// Medallion after the reference: knotwork ring, gold disc with fjord & gulls,
+// billowing striped sail, shield row, carved dragon prow breaking the frame, curling waves
 function LongshipEmblem({ className = "" }: { className?: string }) {
   return (
-    <svg viewBox="-110 -100 220 200" className={className} aria-hidden="true">
+    <svg viewBox="-114 -114 228 228" className={className} aria-hidden="true">
       <defs>
         <linearGradient id="emblem-gold" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#f0d7a2" />
-          <stop offset="55%" stopColor="#d4b073" />
-          <stop offset="100%" stopColor="#a8814b" />
+          <stop offset="0%" stopColor="#f2dcaa" />
+          <stop offset="55%" stopColor="#d6b277" />
+          <stop offset="100%" stopColor="#a9824c" />
         </linearGradient>
+        <radialGradient id="emblem-disc-fill" cx="50%" cy="38%" r="70%">
+          <stop offset="0%" stopColor="#f3dfb0" />
+          <stop offset="70%" stopColor="#d9b67b" />
+          <stop offset="100%" stopColor="#b48c55" />
+        </radialGradient>
         <clipPath id="emblem-disc"><circle r={DISC_R} /></clipPath>
-        <clipPath id="emblem-sail"><path d="M-36 -56 L36 -56 C40 -37 40 -19 34 -2 L-34 -2 C-40 -19 -40 -37 -36 -56 Z" /></clipPath>
-        <mask id="emblem-outside">
-          <rect x="-120" y="-120" width="240" height="240" fill="#fff" />
-          <circle r={DISC_R} fill="#000" />
-        </mask>
-        {/* Where the near waves spill over the bottom of the frame */}
-        <mask id="emblem-spill">
-          <circle r="90" fill="#fff" />
-          <circle r={DISC_R} fill="#000" />
-          <rect x="-120" y="-120" width="240" height="176" fill="#000" />
-          <rect x="-120" y="-120" width="58" height="240" fill="#000" />
-          <rect x="62" y="-120" width="58" height="240" fill="#000" />
-        </mask>
+        <clipPath id="emblem-sail"><path d={SAIL} /></clipPath>
       </defs>
 
-      {/* Braided Norse border */}
-      <circle r="88" fill="none" stroke="url(#emblem-gold)" strokeWidth="0.8" opacity="0.55" />
-      <g fill="none" stroke="url(#emblem-gold)" strokeWidth="1" opacity="0.7">
-        <path d={BRAID_A} />
-        <path d={BRAID_B} />
-      </g>
-      <circle r="75" fill="none" stroke="url(#emblem-gold)" strokeWidth="0.6" opacity="0.45" />
+      {/* Top & bottom ornaments */}
+      {[-106, 106].map((y) => (
+        <g key={y}>
+          <line x1="-50" y1={y} x2="-9" y2={y} stroke="#c9a66c" strokeWidth="1" />
+          <line x1="9" y1={y} x2="50" y2={y} stroke="#c9a66c" strokeWidth="1" />
+          <Diamond x={0} y={y} s={6} />
+        </g>
+      ))}
 
-      {/* Sun disc */}
-      <circle r={DISC_R} fill="url(#emblem-gold)" />
+      {/* Knotwork ring */}
+      <circle r="93" fill="none" stroke={GOLD} strokeWidth="1.6" />
+      <circle r="76.5" fill="none" stroke={GOLD} strokeWidth="1.4" />
+      <Knot d={STRAND_A} />
+      <Knot d={STRAND_B} />
+      <Knot d={STRAND_A_OVER} />
+
+      {/* Gold disc */}
+      <circle r={DISC_R} fill="url(#emblem-disc-fill)" />
 
       <g clipPath="url(#emblem-disc)">
-        {/* Horizon */}
-        <rect x="-80" y={HORIZON} width="160" height="1.2" fill={LEATHER} opacity="0.8" />
-        <rect x="-80" y={HORIZON + 5} width="160" height="0.8" fill={LEATHER} opacity="0.45" />
-
-        {/* Oars dipping into the sea */}
-        <g stroke={LEATHER} strokeWidth="1.8" strokeLinecap="round">
-          {[-42, -26, -10, 6, 22, 38].map((x) => (
-            <line key={x} x1={x + 4} y1="16" x2={x - 7} y2="40" />
-          ))}
+        {/* Fjord mountains on the horizon */}
+        <g fill={LEATHER}>
+          <path d="M-78 20 L-70 4 L-65 9 L-55 -12 L-44 6 L-39 1 L-28 20 Z" opacity="0.9" />
+          <path d="M24 20 L34 4 L40 9 L52 -14 L62 4 L67 -1 L78 20 Z" opacity="0.9" />
+        </g>
+        <g fill="none" stroke="#f2dcaa" strokeWidth="1" opacity="0.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M-59 -4 L-55 -12 L-51 -5 M-55 -12 L-56 0" />
+          <path d="M48 -6 L52 -14 L56 -6 M52 -14 L51 -2" />
+        </g>
+        {/* Horizon water */}
+        <g stroke={LEATHER} strokeLinecap="round">
+          <line x1="-80" y1="20.5" x2="80" y2="20.5" strokeWidth="1.4" />
+          <line x1="-70" y1="25" x2="-40" y2="25" strokeWidth="0.9" opacity="0.6" />
+          <line x1="44" y1="25" x2="72" y2="25" strokeWidth="0.9" opacity="0.6" />
+        </g>
+        {/* Gulls */}
+        <g fill="none" stroke={LEATHER} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M-58 -36 q3.5 -4 7 0 q3.5 -4 7 0" />
+          <path d="M-46 -47 q3 -3.5 6 0 q3 -3.5 6 0" />
+          <path d="M-36 -38 q2.5 -3 5 0 q2.5 -3 5 0" />
         </g>
 
-        <ShipShape color={LEATHER} />
+        {/* Rigging */}
+        <g stroke={LEATHER} strokeWidth="0.9" opacity="0.75">
+          <line x1="-2" y1="-66" x2="52" y2="2" />
+          <line x1="-2" y1="-66" x2="-56" y2="2" />
+        </g>
+        {/* Mast, pennant */}
+        <rect x="-3.6" y="-68" width="3.4" height="74" fill={LEATHER} />
+        <path d="M-0.5 -68 C8 -71 14 -64 25 -67 L20 -61 C12 -59 7 -65 -0.5 -62 Z" fill={LEATHER} />
 
-        {/* Gold details cut into the silhouette */}
-        <g clipPath="url(#emblem-sail)" fill="url(#emblem-gold)">
-          {[-27, -9, 9, 27].map((x) => (
-            <rect key={x} x={x - 4.5} y="-58" width="9" height="58" opacity="0.9" />
+        {/* Billowing striped sail */}
+        <path d={SAIL} fill="url(#emblem-gold)" />
+        <g clipPath="url(#emblem-sail)" fill="none" stroke={LEATHER} strokeWidth="7.5">
+          {[-27, -11, 5, 21].map((x) => (
+            <path key={x} d={`M${x} -62 C${x + 9} -42 ${x + 10} -20 ${x + 3} 4`} />
           ))}
         </g>
-        <path d="M-60 16 C-30 25 30 25 60 16" fill="none" stroke="url(#emblem-gold)" strokeWidth="0.9" opacity="0.7" />
-        {SHIELD_XS.map((x) => (
+        <path d={SAIL} fill="none" stroke={LEATHER} strokeWidth="2.2" strokeLinejoin="round" />
+        <path d="M-40 -57 Q-3 -63 34 -57" fill="none" stroke={LEATHER} strokeWidth="3.4" strokeLinecap="round" />
+
+        {/* Hull & stern curl */}
+        <path d={HULL} fill={LEATHER} />
+        <path d="M-58 4 C-67 -4 -68 -18 -63 -26 C-58 -33 -49 -30 -51 -23 C-52 -19 -57 -20 -56 -24" fill="none" stroke={LEATHER} strokeWidth="5" strokeLinecap="round" />
+        <g fill="none" stroke={GOLD} strokeLinecap="round">
+          <path d="M-52 13 C-28 21 26 21 48 13" strokeWidth="1.1" />
+          <path d="M-42 19 C-22 25 20 25 38 19" strokeWidth="0.8" opacity="0.7" />
+        </g>
+
+        {/* Shield row */}
+        {SHIELDS.map((x) => (
           <g key={x}>
-            <circle cx={x} cy={gunwale(x) + 0.5} r="4.6" fill={LEATHER} stroke="url(#emblem-gold)" strokeWidth="1.3" />
-            <circle cx={x} cy={gunwale(x) + 0.5} r="1.3" fill="url(#emblem-gold)" />
+            <circle cx={x} cy="7.5" r="7.4" fill={LEATHER} stroke={GOLD} strokeWidth="1.5" />
+            <circle cx={x} cy="7.5" r="4.2" fill="none" stroke={GOLD} strokeWidth="0.8" />
+            <circle cx={x} cy="7.5" r="1.7" fill={GOLD} />
           </g>
         ))}
 
-        {/* Huginn & Muninn */}
-        <g fill="none" stroke={LEATHER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M-60 -30 q4 -5 8 0 q4 -5 8 0" />
-          <path d="M-47 -43 q3 -4 6.5 0 q3 -4 6.5 0" />
-        </g>
-
-        {/* Great scroll-waves in front of the hull */}
-        <Waves fill={LEATHER} line="url(#emblem-gold)" />
+        {/* Curling waves */}
+        {WAVES.map((w, i) => (
+          <g key={i} fill="none" stroke={LEATHER} strokeLinecap="round" strokeLinejoin="round">
+            <path d={w.edge} strokeWidth={w.sw} />
+            <path d={w.curls} strokeWidth={w.sw * 0.85} />
+          </g>
+        ))}
+        <path d="M-60 66 C-30 62 30 62 60 66" fill="none" stroke={LEATHER} strokeWidth="1.2" opacity="0.6" />
       </g>
 
-      {/* Prow & stern break out of the sun — inverted to gold */}
-      <g mask="url(#emblem-outside)">
-        <ShipShape color="#d9bb84" />
-      </g>
+      {/* Carved dragon prow breaking out of the ring */}
+      <DragonProw />
 
-      {/* Rim of the sun, then the near waves' gilt lines crash over the bottom of the frame */}
-      <circle r={DISC_R} fill="none" stroke="url(#emblem-gold)" strokeWidth="1.4" />
-      <g mask="url(#emblem-spill)">
-        <path d={WAVES[2].fill} fill={LEATHER} />
-        <Waves line="url(#emblem-gold)" only={[2]} />
-      </g>
-
-      {/* Studs on the border */}
-      {[0, 90, 270].map((a) => (
-        <rect key={a} x="-2.8" y="-2.8" width="5.6" height="5.6" fill="url(#emblem-gold)" transform={`rotate(${a}) translate(0 -88) rotate(45)`} />
-      ))}
+      {/* Studs */}
+      <Diamond x={0} y={-93} />
+      <Diamond x={0} y={93} />
+      <Diamond x={-93} y={0} />
+      <Diamond x={93} y={10} />
     </svg>
   );
 }
@@ -295,16 +335,11 @@ export default function BookCover({ onOpen, language, onLanguageChange, theme, o
           <p className="font-display font-semibold text-[26px] sm:text-[30px] tracking-[0.42em] pl-[0.42em] leading-none text-center bg-gradient-to-b from-[#f0d7a2] via-[#d4b073] to-[#a8814b] bg-clip-text text-transparent drop-shadow-[0_1px_0_rgba(0,0,0,0.5)]">
             VIKINGS
           </p>
-          <div className="flex items-center gap-2 text-gilt-soft/50">
-            <span className="h-px w-10 bg-gradient-to-r from-transparent to-current" />
-            <span className="w-1.5 h-1.5 rotate-45 bg-current" />
-            <span className="h-px w-10 bg-gradient-to-l from-transparent to-current" />
-          </div>
         </div>
 
-        {/* Emblem — a longship crossing the setting sun */}
-        <div className="absolute inset-0 grid place-items-center pointer-events-none pt-6">
-          <LongshipEmblem className="w-[80%] h-auto transition-transform duration-[1400ms] ease-out group-hover:scale-[1.02] drop-shadow-[0_6px_14px_rgba(0,0,0,0.45)]" />
+        {/* Emblem — longship medallion */}
+        <div className="absolute inset-0 grid place-items-center pointer-events-none pt-8">
+          <LongshipEmblem className="w-[84%] h-auto transition-transform duration-[1400ms] ease-out group-hover:scale-[1.02] drop-shadow-[0_6px_14px_rgba(0,0,0,0.45)]" />
         </div>
 
         {/* Quiet foot line */}
