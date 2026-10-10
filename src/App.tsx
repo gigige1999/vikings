@@ -541,7 +541,6 @@ export default function App() {
           setSelectedHotspot(null);
           triggerPageTurnSound();
         }}
-        coverImage={asset("/images/viking_cover_1784019389283.jpg")}
         language={language}
         onLanguageChange={setLanguage}
         theme={theme}
