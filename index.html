@@ -3,10 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
+    <title>不列颠维京纪元 · The Viking Age in Britain</title>
+    <meta name="theme-color" content="#17110b" />
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Apply saved reading theme before first paint to avoid a flash
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem("viking_theme") === "light" ? "light" : "dark";
+      } catch (e) {}
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

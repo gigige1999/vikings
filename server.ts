@@ -7,9 +7,9 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
-app.use(express.json({ limit: "5mb" }));
+app.use(express.json({ limit: "1mb" }));
 
 // Lazy initialization of GoogleGenAI
 let aiClient: GoogleGenAI | null = null;
@@ -131,7 +131,11 @@ app.post("/api/translate", async (req, res) => {
 async function start() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: false,
+        ws: false,
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);

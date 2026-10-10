@@ -19,6 +19,7 @@ export interface BookPage {
   image: string;
   hotspots: Hotspot[];
   isTimelineComponent?: boolean; // if true, render the interactive kingship timeline component
+  isExpansionMap?: boolean; // if true, render the interactive Viking expansion map of Europe
 }
 
 export interface Chapter {
@@ -31,6 +32,7 @@ export interface Chapter {
   paragraphs: string[]; // references page 1 paragraphs for fallback / admin usage
   defaultImage: string; // references page 1 image
   hotspots: Hotspot[];  // references page 1 hotspots
+  coverImage?: string;  // optional chapter cover/frontispiece image (shown on chapter landing page)
   pages: BookPage[];
 }
 

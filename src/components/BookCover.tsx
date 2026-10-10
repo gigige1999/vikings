@@ -4,116 +4,135 @@
  */
 
 import { motion } from "motion/react";
-import { BookOpen, ShieldAlert, Compass } from "lucide-react";
+import { Sun, Moon } from "lucide-react";
 
 interface BookCoverProps {
   onOpen: () => void;
   coverImage: string;
   language: "en" | "zh";
   onLanguageChange: (lang: "en" | "zh") => void;
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
 }
 
-export default function BookCover({ onOpen, coverImage, language, onLanguageChange }: BookCoverProps) {
+export default function BookCover({ onOpen, coverImage, language, onLanguageChange, theme, onToggleTheme }: BookCoverProps) {
   const isZh = language === "zh";
 
   return (
-    <div id="book-cover-container" className="flex items-center justify-center min-h-screen bg-neutral-900 overflow-hidden relative p-4">
-      {/* Dynamic dust / ember particle background */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(50,30,10,0.4)_0%,rgba(10,5,2,0.9)_100%)] pointer-events-none" />
-      <div className="absolute inset-0 opacity-10 bg-noise pointer-events-none" />
+    <div
+      id="book-cover-container"
+      className="relative min-h-screen overflow-hidden bg-chrome-bg transition-colors duration-500 flex flex-col items-center justify-center gap-7 sm:gap-9 px-4 py-20"
+    >
+      {/* Ambient light & grain */}
+      <div className="absolute inset-0 pointer-events-none app-ambient" />
+      <div className="absolute inset-0 bg-noise pointer-events-none mix-blend-overlay app-noise" />
 
-      {/* Top right language toggle */}
-      <div className="absolute top-4 right-4 z-20 flex bg-black/45 p-1 rounded-xl border border-neutral-800 backdrop-blur-sm shadow-md">
+      {/* Top-right controls: background theme + language */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
         <button
-          onClick={() => onLanguageChange("en")}
-          className={`px-3 py-1 text-xs font-sans rounded-lg transition-all cursor-pointer ${
-            language === "en"
-              ? "bg-[#8b0000] text-white font-bold"
-              : "text-neutral-400 hover:text-white"
-          }`}
+          onClick={onToggleTheme}
+          title={theme === "dark" ? (isZh ? "切换为白色背景" : "Switch to white background") : (isZh ? "切换为深色背景" : "Switch to dark background")}
+          aria-label={isZh ? "切换背景" : "Toggle background"}
+          className="w-8 h-8 grid place-items-center rounded-full ring-1 ring-chrome-line/25 bg-chrome-surface backdrop-blur-md text-chrome/60 hover:text-chrome transition-colors duration-300 cursor-pointer"
         >
-          English
+          {theme === "dark" ? <Sun strokeWidth={1.5} className="w-4 h-4" /> : <Moon strokeWidth={1.5} className="w-4 h-4" />}
         </button>
-        <button
-          onClick={() => onLanguageChange("zh")}
-          className={`px-3 py-1 text-xs font-sans rounded-lg transition-all cursor-pointer ${
-            language === "zh"
-              ? "bg-[#8b0000] text-white font-bold"
-              : "text-neutral-400 hover:text-white"
-          }`}
-        >
-          中文
-        </button>
+        <div className="flex items-center p-0.5 rounded-full ring-1 ring-chrome-line/25 bg-chrome-surface backdrop-blur-md">
+          {(["en", "zh"] as const).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => onLanguageChange(lang)}
+              className={`h-7 px-3 rounded-full text-[11px] tracking-wider transition-colors duration-300 cursor-pointer ${
+                language === lang
+                  ? "bg-chrome text-chrome-bg font-semibold"
+                  : "text-chrome/55 hover:text-chrome"
+              }`}
+            >
+              {lang === "en" ? "English" : "中文"}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Medieval Title Card floating slightly */}
-      <div className="absolute top-10 sm:top-16 text-center pointer-events-none z-10 px-4">
-        <h2 className={`${isZh ? "font-zh-retro text-neutral-400 tracking-[0.25em]" : "font-display text-neutral-500 tracking-[0.3em]"} uppercase text-[10px] sm:text-xs mb-1.5 sm:mb-2`}>
+      {/* Title block */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 text-center pointer-events-none"
+      >
+        <p className={`${isZh ? "font-zh-serif tracking-[0.5em]" : "font-display tracking-[0.45em]"} uppercase text-[10px] sm:text-[11px] text-chrome-line/80`}>
           {isZh ? "交互式历史手抄本" : "Interactive Manuscript"}
-        </h2>
-        <h1 className={`${isZh ? "font-zh-serif font-black text-4xl sm:text-6xl tracking-[0.08em]" : "font-gothic text-3xl sm:text-5xl tracking-wider"} text-[#dbbe8b] drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]`}>
+        </p>
+        <h1
+          className={`${
+            isZh ? "font-zh-serif font-bold text-4xl sm:text-[3.4rem] tracking-[0.14em]" : "font-gothic text-4xl sm:text-[3.4rem] tracking-wide"
+          } mt-3 text-chrome leading-tight title-glow`}
+        >
           {isZh ? "不列颠维京纪元" : "The Viking Age in Britain"}
         </h1>
-        <p className={`${isZh ? "font-zh-retro text-neutral-400 text-xs sm:text-sm tracking-widest mt-2" : "font-serif italic text-neutral-400 text-xs sm:text-sm mt-1"}`}>
-          {isZh ? "彩绘数字编年史 • 公元 793 – 1066 年" : "An Illuminated Digital Chronicle • 793 – 1066 AD"}
-        </p>
-      </div>
+        <div className="mt-4 flex items-center justify-center gap-3 text-chrome-line/70">
+          <span className="h-px w-10 bg-gradient-to-r from-transparent to-current" />
+          <span className="font-display text-[10px] sm:text-[11px] tracking-[0.3em]">793 — 1066</span>
+          <span className="h-px w-10 bg-gradient-to-l from-transparent to-current" />
+        </div>
+      </motion.div>
 
-      {/* 3D-like Book Canvas */}
-      <motion.div
+      {/* Book */}
+      <motion.button
         id="leather-book-3d"
-        initial={{ scale: 0.9, opacity: 0, y: 30 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        whileHover={{ scale: 1.02, y: -6 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
+        type="button"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -6 }}
+        whileTap={{ scale: 0.985 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         onClick={onOpen}
-        className="relative w-full max-w-[480px] aspect-[3/4] rounded-2xl overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.95)] bg-stone-900 group cursor-pointer hover:shadow-[0_45px_120px_rgba(139,0,0,0.35)] transition-shadow"
+        aria-label={isZh ? "打开手抄本" : "Open the manuscript"}
+        className="group relative z-10 w-[min(380px,80vw,calc((100svh_-_300px)*0.75))] aspect-[3/4] rounded-[6px] overflow-hidden bg-stone-900 cursor-pointer book-shadow ring-1 ring-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-gilt"
       >
-        {/* Leather texture generated image background */}
         <img
           src={coverImage}
           alt="Leather Book Cover"
           referrerPolicy="no-referrer"
-          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-[1600ms] ease-out group-hover:scale-[1.04]"
         />
 
-        {/* Dark gold foil/vignette shadow overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/35 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/45 pointer-events-none" />
 
-        {/* Embossed Ornate Center Stamp */}
-        <div className="absolute inset-0 flex flex-col items-center justify-between py-16 px-8 z-10 pointer-events-none">
+        {/* Tooled gilt frame */}
+        <div className="absolute inset-3 sm:inset-4 border border-gilt-soft/25 pointer-events-none" />
+        <div className="absolute inset-[18px] sm:inset-[22px] border border-gilt-soft/10 pointer-events-none" />
+
+        {/* Embossed content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-between py-12 sm:py-14 px-8 pointer-events-none">
           <div className="text-center">
-            <span className="text-[10px] tracking-[0.4em] font-mono text-[#a37f4c]/70 block mb-1">CHRONICULUM</span>
-            <div className="h-[2px] w-20 bg-[#a37f4c]/40 mx-auto" />
+            <span className="font-display text-[10px] tracking-[0.5em] text-gilt-soft/70">CHRONICVLVM</span>
+            <div className="mt-2 h-px w-14 mx-auto bg-gilt-soft/30" />
           </div>
 
-          {/* Clean ornament with absolutely no button-like platter or border */}
-          <div className="flex flex-col items-center justify-center py-6">
-            <Compass className="w-12 h-12 text-[#a37f4c]/70 animate-[spin_120s_linear_infinite]" />
-            <span className={`${isZh ? "font-zh-retro tracking-[0.2em] text-[10px]" : "font-mono tracking-[0.3em] text-[9px] uppercase"} text-[#a37f4c]/65 mt-2`}>
-              {isZh ? "不列颠" : "BRITANNIA"}
-            </span>
-          </div>
+          <div className="font-mono text-[11px] tracking-[0.6em] text-gilt-soft/45 select-none">ᚠᚢᚦᚨᚱᚲ</div>
 
           <div className="text-center">
-            <p className={`${isZh ? "font-zh-brush text-2xl text-[#dbbe8b]/90 tracking-widest" : "font-gothic text-lg text-[#dbbe8b]/80 tracking-widest"}`}>
-              {isZh ? "编年史 • 北欧人" : "Englisce • Se Norþmenn"}
+            <p className={`${isZh ? "font-zh-serif text-lg tracking-[0.35em]" : "font-gothic text-xl tracking-wider"} text-gilt-soft/90`}>
+              {isZh ? "北欧人编年史" : "Se Norþmenn"}
             </p>
-            <p className="text-[10px] text-neutral-400 font-serif mt-1">Anno Domini Milleximo</p>
+            <p className="mt-1.5 font-display text-[9px] tracking-[0.4em] text-gilt-soft/45">ANNO DOMINI</p>
           </div>
         </div>
 
-        {/* Vintage spine simulation on the left */}
-        <div className="absolute top-0 left-0 w-6 h-full bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
-      </motion.div>
+        {/* Spine shading */}
+        <div className="absolute top-0 left-0 w-5 h-full bg-gradient-to-r from-black/70 via-black/25 to-transparent pointer-events-none" />
+      </motion.button>
 
-      {/* Guide label at bottom */}
-      <div className="absolute bottom-6 text-center pointer-events-none">
-        <span className={`${isZh ? "font-zh-retro text-xs text-[#dbbe8b]/65 tracking-widest" : "font-mono text-[10px] tracking-widest uppercase"} animate-pulse`}>
-          {isZh ? "点击封面任意位置，开启尘封的历史手卷。" : "Click anywhere on the cover to open the dusty history scroll."}
-        </span>
-      </div>
+      {/* Hint */}
+      <p
+        className={`relative z-10 pointer-events-none ${
+          isZh ? "font-zh-serif tracking-[0.3em] text-[12px]" : "font-display tracking-[0.3em] uppercase text-[10px]"
+        } text-chrome/45 animate-pulse`}
+      >
+        {isZh ? "轻触封面 · 开启手卷" : "Touch the cover to open"}
+      </p>
     </div>
   );
 }

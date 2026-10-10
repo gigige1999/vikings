@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Large unreferenced source artwork (kept locally only)
+public/images/chapters/
+public/images/milestones/
+src/assets/images/timeline/
+exported_config.json
