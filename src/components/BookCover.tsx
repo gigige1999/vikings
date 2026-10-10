@@ -32,17 +32,76 @@ function ShipShape({ color }: { color: string }) {
   );
 }
 
-// Gilt emblem: a setting sun, a longship sailing across it, banded sea, Odin's two ravens
+type WaveRow = { base: number; w: number; h: number; start: number };
+
+// Three rows of curling Norse scroll-waves, from far (small) to near (large)
+const WAVE_ROWS: WaveRow[] = [
+  { base: 42, w: 32, h: 14, start: -100 },
+  { base: 58, w: 42, h: 19, start: -118 },
+  { base: 80, w: 54, h: 27, start: -106 },
+];
+
+const f = (n: number) => n.toFixed(1);
+
+function waveRowPaths({ base: B, w, h, start }: WaveRow) {
+  let edge = `M${f(start)} ${f(B)}`;
+  const curls: string[] = [];
+  const foam: string[] = [];
+  let x0 = start;
+  for (; x0 < 112; x0 += w) {
+    const X = (k: number) => f(x0 + k * w);
+    const Y = (k: number) => f(B - k * h);
+    edge +=
+      ` C${X(0.3)} ${Y(0)} ${X(0.4)} ${Y(1)} ${X(0.62)} ${Y(1)}` +
+      ` C${X(0.84)} ${Y(1)} ${X(0.92)} ${Y(0.62)} ${X(0.86)} ${Y(0.42)}` +
+      ` C${X(0.9)} ${Y(0.16)} ${X(0.95)} ${Y(0)} ${X(1)} ${Y(0)}`;
+    // Spiral curl tucked under the breaking lip
+    curls.push(
+      `M${X(0.86)} ${Y(0.42)} C${X(0.78)} ${Y(0.18)} ${X(0.58)} ${Y(0.3)} ${X(0.62)} ${Y(0.56)}` +
+        ` C${X(0.65)} ${Y(0.76)} ${X(0.81)} ${Y(0.7)} ${X(0.76)} ${Y(0.5)}`
+    );
+    // Wind-combed lines on the back of the wave
+    foam.push(`M${X(0.08)} ${Y(0.05)} C${X(0.28)} ${Y(0.1)} ${X(0.36)} ${Y(0.6)} ${X(0.52)} ${Y(0.8)}`);
+    foam.push(`M${X(0.2)} ${Y(-0.02)} C${X(0.36)} ${Y(0.02)} ${X(0.44)} ${Y(0.38)} ${X(0.56)} ${Y(0.52)}`);
+  }
+  const fill = `${edge} L${f(x0)} 120 L${f(start)} 120 Z`;
+  return { edge, fill, curls: curls.join(" "), foam: foam.join(" ") };
+}
+
+const WAVES = WAVE_ROWS.map(waveRowPaths);
+
+// Braided cable ring (two interlaced sinusoids) — a classic Norse border
+function braid(r: number, amp: number, n: number, phase: number) {
+  const pts: string[] = [];
+  for (let i = 0; i <= 720; i++) {
+    const t = (i / 720) * Math.PI * 2;
+    const rr = r + amp * Math.sin(n * t + phase);
+    pts.push(`${i ? "L" : "M"}${f(rr * Math.sin(t))} ${f(-rr * Math.cos(t))}`);
+  }
+  return pts.join("") + "Z";
+}
+const BRAID_A = braid(81, 2.6, 36, 0);
+const BRAID_B = braid(81, 2.6, 36, Math.PI);
+
+function Waves({ fill, line, only }: { fill?: string; line: string; only?: number[] }) {
+  return (
+    <>
+      {WAVES.map((w, i) =>
+        only && !only.includes(i) ? null : (
+          <g key={i}>
+            {fill && <path d={w.fill} fill={fill} />}
+            <path d={w.edge} fill="none" stroke={line} strokeWidth={1.4 + i * 0.45} strokeLinecap="round" strokeLinejoin="round" />
+            <path d={w.curls} fill="none" stroke={line} strokeWidth={1.2 + i * 0.4} strokeLinecap="round" />
+            <path d={w.foam} fill="none" stroke={line} strokeWidth={0.75 + i * 0.2} strokeLinecap="round" opacity="0.7" />
+          </g>
+        )
+      )}
+    </>
+  );
+}
+
+// Gilt emblem: a setting sun, a longship riding great scroll-waves, Odin's two ravens
 function LongshipEmblem({ className = "" }: { className?: string }) {
-  const sea = [
-    { y: 31, h: 1.4 },
-    { y: 36, h: 2 },
-    { y: 41.5, h: 2.6 },
-    { y: 47.5, h: 3.3 },
-    { y: 54, h: 4 },
-    { y: 61, h: 5 },
-    { y: 68.5, h: 8 },
-  ];
   return (
     <svg viewBox="-110 -100 220 200" className={className} aria-hidden="true">
       <defs>
@@ -57,24 +116,31 @@ function LongshipEmblem({ className = "" }: { className?: string }) {
           <rect x="-120" y="-120" width="240" height="240" fill="#fff" />
           <circle r={DISC_R} fill="#000" />
         </mask>
+        {/* Where the near waves spill over the bottom of the frame */}
+        <mask id="emblem-spill">
+          <circle r="90" fill="#fff" />
+          <circle r={DISC_R} fill="#000" />
+          <rect x="-120" y="-120" width="240" height="176" fill="#000" />
+          <rect x="-120" y="-120" width="58" height="240" fill="#000" />
+          <rect x="62" y="-120" width="58" height="240" fill="#000" />
+        </mask>
       </defs>
 
-      {/* Outer tooled rings */}
-      <circle r="86" fill="none" stroke="url(#emblem-gold)" strokeWidth="0.9" opacity="0.65" />
-      <circle r="80" fill="none" stroke="url(#emblem-gold)" strokeWidth="0.6" opacity="0.45" strokeDasharray="1 3.2" />
-      {[0, 90, 180, 270].map((a) => (
-        <rect key={a} x="-2.6" y="-2.6" width="5.2" height="5.2" fill="url(#emblem-gold)" transform={`rotate(${a}) translate(0 -86) rotate(45)`} />
-      ))}
+      {/* Braided Norse border */}
+      <circle r="88" fill="none" stroke="url(#emblem-gold)" strokeWidth="0.8" opacity="0.55" />
+      <g fill="none" stroke="url(#emblem-gold)" strokeWidth="1" opacity="0.7">
+        <path d={BRAID_A} />
+        <path d={BRAID_B} />
+      </g>
+      <circle r="75" fill="none" stroke="url(#emblem-gold)" strokeWidth="0.6" opacity="0.45" />
 
       {/* Sun disc */}
       <circle r={DISC_R} fill="url(#emblem-gold)" />
 
       <g clipPath="url(#emblem-disc)">
-        {/* Banded sea below the horizon */}
-        <rect x="-80" y={HORIZON} width="160" height="1.2" fill={LEATHER} />
-        {sea.map((s) => (
-          <rect key={s.y} x="-80" y={s.y} width="160" height={s.h} fill={LEATHER} />
-        ))}
+        {/* Horizon */}
+        <rect x="-80" y={HORIZON} width="160" height="1.2" fill={LEATHER} opacity="0.8" />
+        <rect x="-80" y={HORIZON + 5} width="160" height="0.8" fill={LEATHER} opacity="0.45" />
 
         {/* Oars dipping into the sea */}
         <g stroke={LEATHER} strokeWidth="1.8" strokeLinecap="round">
@@ -104,12 +170,27 @@ function LongshipEmblem({ className = "" }: { className?: string }) {
           <path d="M-60 -30 q4 -5 8 0 q4 -5 8 0" />
           <path d="M-47 -43 q3 -4 6.5 0 q3 -4 6.5 0" />
         </g>
+
+        {/* Great scroll-waves in front of the hull */}
+        <Waves fill={LEATHER} line="url(#emblem-gold)" />
       </g>
 
       {/* Prow & stern break out of the sun — inverted to gold */}
       <g mask="url(#emblem-outside)">
         <ShipShape color="#d9bb84" />
       </g>
+
+      {/* Rim of the sun, then the near waves' gilt lines crash over the bottom of the frame */}
+      <circle r={DISC_R} fill="none" stroke="url(#emblem-gold)" strokeWidth="1.4" />
+      <g mask="url(#emblem-spill)">
+        <path d={WAVES[2].fill} fill={LEATHER} />
+        <Waves line="url(#emblem-gold)" only={[2]} />
+      </g>
+
+      {/* Studs on the border */}
+      {[0, 90, 270].map((a) => (
+        <rect key={a} x="-2.8" y="-2.8" width="5.6" height="5.6" fill="url(#emblem-gold)" transform={`rotate(${a}) translate(0 -88) rotate(45)`} />
+      ))}
     </svg>
   );
 }
