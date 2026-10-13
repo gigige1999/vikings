@@ -11,6 +11,7 @@ import { Chapter, Hotspot } from "./types";
 import BookCover from "./components/BookCover";
 import { ExpansionLeftPage, ExpansionMapPanel, ExpansionFocus } from "./components/ExpansionMap";
 import FilmPlayer from "./components/FilmPlayer";
+import EraGlyph from "./components/EraGlyph";
 import { EXPANSION_ERAS } from "./expansion_data";
 import {
   ChevronLeft,
@@ -917,9 +918,12 @@ export default function App() {
                                       boxShadow: `0 0 0 ${isSelected ? 2 : 1}px ${isSelected ? "rgba(227,208,166,0.95)" : "rgba(184,149,95,0.55)"}, 0 3px 6px rgba(0,0,0,0.25), inset 0 1px 2px rgba(255,255,255,0.25), inset 0 -2px 3px rgba(0,0,0,0.3)`
                                     }}
                                   >
-                                    <span className="text-white/95 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)] select-none text-sm">
-                                      {era.badge}
-                                    </span>
+                                    <span className="absolute inset-[3px] rounded-[45%_55%_50%_48%] border border-[#f6e9c8]/25 pointer-events-none" />
+                                    <EraGlyph
+                                      id={era.id}
+                                      fallback={era.badge}
+                                      className="relative w-[19px] h-[19px] text-[#f6e9c8] drop-shadow-[0_1px_1px_rgba(0,0,0,0.45)] select-none"
+                                    />
                                   </div>
 
                                   {/* Year & Label */}

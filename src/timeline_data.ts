@@ -49,7 +49,7 @@ export const TIMELINE_ERAS: EraNode[] = [
     yearRange: "802-878",
     label: { en: "Alfred's Resistance", zh: "反抗入侵" },
     badge: "🛡️",
-    color: "#c8a67a",
+    color: "#9a7440",
     accentBg: "bg-amber-950/25",
     subTrack: [
       {
