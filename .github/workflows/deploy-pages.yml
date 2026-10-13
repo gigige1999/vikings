@@ -32,11 +32,11 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
 
-      - name: Verify every referenced image is in the build
+      - name: Verify every referenced image and video is in the build
         run: |
           missing=0
-          for ref in $(grep -rhoE '/images/[A-Za-z0-9_./-]+\.(jpg|jpeg|png|webp)' src | sort -u); do
-            if [ ! -f "dist$ref" ]; then echo "::error::Missing image dist$ref"; missing=1; fi
+          for ref in $(grep -rhoE '/(images|videos)/[A-Za-z0-9_./-]+\.(jpg|jpeg|png|webp|mp4)' src | sort -u); do
+            if [ ! -f "dist$ref" ]; then echo "::error::Missing asset dist$ref"; missing=1; fi
           done
           exit $missing
 

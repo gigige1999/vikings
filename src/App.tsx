@@ -10,6 +10,7 @@ import { TIMELINE_ERAS, TimelineEvent, EraNode } from "./timeline_data";
 import { Chapter, Hotspot } from "./types";
 import BookCover from "./components/BookCover";
 import { ExpansionLeftPage, ExpansionMapPanel, ExpansionFocus } from "./components/ExpansionMap";
+import FilmPlayer from "./components/FilmPlayer";
 import { EXPANSION_ERAS } from "./expansion_data";
 import {
   ChevronLeft,
@@ -21,7 +22,8 @@ import {
   X,
   BookMarked,
   Sun,
-  Moon
+  Moon,
+  Play
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { playParchmentTurnSound } from "./utils/sound";
@@ -186,6 +188,9 @@ export default function App() {
   const [expansionEra, setExpansionEra] = useState(EXPANSION_ERAS.length - 1);
   const [expansionFocus, setExpansionFocus] = useState<ExpansionFocus>(null);
 
+  // Milestones documentary film
+  const [isFilmOpen, setIsFilmOpen] = useState(false);
+
   // Translation States
   const [translationStyle, setTranslationStyle] = useState<"modern" | "old-english" | "skaldic-verse" | "chronicle">("modern");
   const [translatedText, setTranslatedText] = useState<{ [key: string]: string }>({});
@@ -223,6 +228,7 @@ export default function App() {
   // Keyboard navigation for turning pages
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isFilmOpen) return; // arrows seek the film instead of turning pages
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       if (e.key === "ArrowLeft") {
@@ -233,7 +239,12 @@ export default function App() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeChapterIndex, activePageIndex, chaptersList, showDirectory, isSoundEnabled]);
+  }, [activeChapterIndex, activePageIndex, chaptersList, showDirectory, isSoundEnabled, isFilmOpen]);
+
+  // Close the film whenever the reader leaves the page
+  useEffect(() => {
+    setIsFilmOpen(false);
+  }, [activeChapterIndex, activePageIndex, showDirectory, isOpen]);
 
   const activeChapter = chaptersList[activeChapterIndex];
   const activePageIndexNormalized = Math.min(activePageIndex, activeChapter.pages.length - 1);
@@ -388,7 +399,7 @@ export default function App() {
 
     const handleScroll = () => {
       // Only active on mobile/tablet viewports where pages stack vertically (width < 1024)
-      if (window.innerWidth >= 1024) {
+      if (window.innerWidth >= 1024 || isFilmOpen) {
         setShowAutoTurnHint(false);
         return;
       }
@@ -449,7 +460,7 @@ export default function App() {
       clearInterval(intervalId);
       clearTimeout(timeoutId);
     };
-  }, [activeChapterIndex, activePageIndex, chaptersList, handleNextPage]);
+  }, [activeChapterIndex, activePageIndex, chaptersList, handleNextPage, isFilmOpen]);
 
   // Ask Gemini to translate the chapter's paragraphs dynamically
   const handleTranslatePage = async (style: "old-english" | "skaldic-verse" | "chronicle") => {
@@ -1111,7 +1122,7 @@ export default function App() {
                     backfaceVisibility: "hidden",
                     willChange: "transform, opacity"
                   }}
-                  className="right-page-immersive rounded-xl lg:rounded-r-2xl lg:rounded-l-none p-6 sm:p-8 md:p-10 lg:p-11 flex flex-col justify-between min-h-[480px] sm:min-h-[550px] lg:h-[700px] relative overflow-hidden"
+                  className={`right-page-immersive rounded-xl lg:rounded-r-2xl lg:rounded-l-none p-6 sm:p-8 md:p-10 lg:p-11 flex flex-col justify-between lg:h-[700px] relative overflow-hidden ${isFilmOpen ? "min-h-[760px] sm:min-h-[860px] lg:min-h-0" : "min-h-[480px] sm:min-h-[550px]"}`}
                 >
                   
                   <PageFrame />
@@ -1167,13 +1178,29 @@ export default function App() {
                           <div className="flex flex-col h-full justify-between">
                             <div>
                               {/* Event Header */}
-                              <div className="mb-4 pb-3 border-b border-ink/10 flex items-baseline justify-between gap-3">
+                              <div className="mb-4 pb-3 border-b border-ink/10 flex items-center justify-between gap-3">
                                 <span className="font-display text-[12px] tracking-[0.2em] text-oxblood">
                                   AD {currentEvent.year}
                                 </span>
-                                <span className={`${labelFont} text-[10px] text-ink-soft/55`}>
-                                  {isZh ? "纪事详析" : "Chronology"}
-                                </span>
+                                {/* Documentary entry */}
+                                <button
+                                  onClick={() => setIsFilmOpen(true)}
+                                  title={isZh ? "播放纪录短片《维京时代 793–1066》" : "Play the documentary “The Viking Age 793–1066”"}
+                                  className="group/film flex items-center gap-2 h-9 pl-1 pr-3.5 rounded-full bg-white/50 ring-1 ring-gilt/45 hover:ring-oxblood/40 hover:bg-white/80 shadow-[0_6px_14px_-10px_rgba(42,30,18,0.6)] transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-oxblood/50"
+                                >
+                                  <span className="relative w-12 h-7 rounded-full overflow-hidden ring-1 ring-black/10 shrink-0">
+                                    <img src={asset("/videos/vikings_793-1066_poster.jpg")} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover/film:scale-110" />
+                                    <span className="absolute inset-0 grid place-items-center bg-black/30 group-hover/film:bg-oxblood/60 transition-colors">
+                                      <Play className="w-3 h-3 ml-px text-white" fill="currentColor" strokeWidth={0} />
+                                    </span>
+                                  </span>
+                                  <span className="flex flex-col items-start leading-none">
+                                    <span className={`${isZh ? "font-zh-serif tracking-[0.06em]" : "font-serif"} text-[12px] font-semibold text-ink group-hover/film:text-oxblood transition-colors`}>
+                                      {isZh ? "观看纪录短片" : "Watch the film"}
+                                    </span>
+                                    <span className="mt-1 font-display text-[9px] tracking-[0.15em] text-ink-soft/60">2:00 · 793–1066</span>
+                                  </span>
+                                </button>
                               </div>
 
                               {/* Event Title */}
@@ -1334,6 +1361,17 @@ export default function App() {
                     </>
                   )}
 
+                  {/* Documentary player slides over the milestones right page */}
+                  <AnimatePresence>
+                    {activePage.isTimelineComponent && isFilmOpen && (
+                      <FilmPlayer
+                        src={asset("/videos/vikings_793-1066.mp4")}
+                        poster={asset("/videos/vikings_793-1066_poster.jpg")}
+                        language={language}
+                        onClose={() => setIsFilmOpen(false)}
+                      />
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               </AnimatePresence>
             </div>
