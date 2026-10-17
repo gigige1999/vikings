@@ -87,7 +87,7 @@ export function ExpansionLeftPage({
       </p>
 
       {/* Era selector */}
-      <div className="relative flex-1 overflow-y-auto max-h-[300px] sm:max-h-[360px] lg:max-h-[400px] pr-2 min-h-[220px]">
+      <div className="relative flex-1 lg:overflow-y-auto lg:max-h-[400px] lg:pr-2 lg:min-h-[220px]">
         <div className="absolute left-[25px] top-4 bottom-4 w-px bg-gradient-to-b from-transparent via-gilt/45 to-transparent" />
         <div className="relative space-y-1">
           {EXPANSION_ERAS.map((e, i) => {
@@ -411,9 +411,12 @@ export function ExpansionMapPanel({ language, era, focus, onFocus }: SharedProps
               animate={{ opacity: 1 }}
               className="h-full flex items-center justify-center text-center font-serif italic text-[12px] leading-relaxed text-ink-soft/70 px-2"
             >
-              {isZh
-                ? "点击地图上的彩色领地或标记，或左侧的地名，查看该地被维京人占据的年代与经过。"
-                : "Tap a coloured territory or marker on the map — or a place name on the left — to read when and how the Norse took it."}
+              <span>
+                {isZh ? "点击地图上的彩色领地或标记，或" : "Tap a coloured territory or marker on the map — or a place name "}
+                <span className="lg:hidden">{isZh ? "下方" : "below"}</span>
+                <span className="hidden lg:inline">{isZh ? "左侧" : "on the left"}</span>
+                {isZh ? "的地名，查看该地被维京人占据的年代与经过。" : " — to read when and how the Norse took it."}
+              </span>
             </motion.p>
           )}
         </AnimatePresence>

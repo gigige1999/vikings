@@ -20,6 +20,9 @@ export interface BookPage {
   hotspots: Hotspot[];
   isTimelineComponent?: boolean; // if true, render the interactive kingship timeline component
   isExpansionMap?: boolean; // if true, render the interactive Viking expansion map of Europe
+  isFigureGraph?: boolean; // if true, render the key-figures relationship graph
+  isDietOverview?: boolean; // if true, render the diet changes & common foods overview
+  isArchOverview?: boolean; // if true, render the architecture changes & diagram overview
 }
 
 export interface Chapter {

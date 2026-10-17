@@ -95,6 +95,16 @@ export const CHAPTERS_DATA: Chapter[] = [
     ],
     "pages": [
       {
+        "id": "chronicle_figures",
+        "title": "The Chronicle's Key Figures",
+        "paragraphs": [
+          "From the landing of the Great Heathen Army in 865 to the sunset at Hastings in 1066, England's fate turned on the blood, marriages, oaths and wars binding these fifteen people. The graph runs through three ages from top to bottom: Anglo-Saxon rulers mostly on the left, Viking leaders mostly on the right, and the Normans, in blue, entering in the later two. Select anyone to read their deeds and ties."
+        ],
+        "image": "",
+        "hotspots": [],
+        "isFigureGraph": true
+      },
+      {
         "id": "chronicle_intro",
         "title": "The Scriptorium Chronicle",
         "paragraphs": [
@@ -262,7 +272,7 @@ export const CHAPTERS_DATA: Chapter[] = [
           {
             "id": "battle_assandun",
             "name": "Battle of Assandun (1016)",
-            "description": "Cnut and Edmund II fought for England; Edmund won five battles in a year but fell at Assandun, where Cnut emerged victorious.",
+            "description": "Cnut and Edmund II fought for England; after a run of hard battles Edmund was routed at Assandun when an ally deserted. They divided the kingdom, and when Edmund died weeks later Cnut ruled alone.",
             "x": 63,
             "y": 40
           },
@@ -451,6 +461,16 @@ export const CHAPTERS_DATA: Chapter[] = [
       }
     ],
     "pages": [
+      {
+        "id": "diet_overview",
+        "title": "Changing Habits & Common Foods",
+        "paragraphs": [
+          "From the farms of the homeland to the settlements of Britain, the Viking table changed with conquest, settlement and conversion."
+        ],
+        "image": "",
+        "hotspots": [],
+        "isDietOverview": true
+      },
       {
         "id": "diet_hearth",
         "title": "The Hearth & The Mead Hall",
@@ -741,6 +761,16 @@ export const CHAPTERS_DATA: Chapter[] = [
       }
     ],
     "pages": [
+      {
+        "id": "arch_overview",
+        "title": "How Building Changed: A Diagram",
+        "paragraphs": [
+          "From the longhouses of the homeland to the stone churches of Britain, Viking building changed with settlement and conversion."
+        ],
+        "image": "",
+        "hotspots": [],
+        "isArchOverview": true
+      },
       {
         "id": "arch_longhouse",
         "title": "The Turf Longhouse & Homestead",

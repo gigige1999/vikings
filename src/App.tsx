@@ -10,6 +10,9 @@ import { TIMELINE_ERAS, TimelineEvent, EraNode } from "./timeline_data";
 import { Chapter, Hotspot } from "./types";
 import BookCover from "./components/BookCover";
 import { ExpansionLeftPage, ExpansionMapPanel, ExpansionFocus } from "./components/ExpansionMap";
+import { FigureLeftPage, FigureGraphPanel } from "./components/FigureGraph";
+import { DietLeftPage, DietFoodPanel } from "./components/DietOverview";
+import { ArchLeftPage, ArchDiagramPanel } from "./components/ArchOverview";
 import FilmPlayer from "./components/FilmPlayer";
 import EraGlyph from "./components/EraGlyph";
 import { EXPANSION_ERAS } from "./expansion_data";
@@ -188,6 +191,11 @@ export default function App() {
   // Expansion map state (defaults to the full extent by 1066)
   const [expansionEra, setExpansionEra] = useState(EXPANSION_ERAS.length - 1);
   const [expansionFocus, setExpansionFocus] = useState<ExpansionFocus>(null);
+  const [figureFocus, setFigureFocus] = useState("alfred");
+  const [dietEra, setDietEra] = useState(0);
+  const [dietFood, setDietFood] = useState<string | null>(null);
+  const [archEra, setArchEra] = useState(0);
+  const [archSpot, setArchSpot] = useState<number | null>(null);
 
   // Milestones documentary film
   const [isFilmOpen, setIsFilmOpen] = useState(false);
@@ -219,9 +227,18 @@ export default function App() {
     }
   };
 
-  // Mobile auto-page turn state with real-time countdown progress
-  const [showAutoTurnHint, setShowAutoTurnHint] = useState(false);
-  const [autoTurnProgress, setAutoTurnProgress] = useState(100);
+  // Mobile (stacked, < lg) reading helpers
+  const bookRef = React.useRef<HTMLDivElement>(null);
+  const tabsRef = React.useRef<HTMLDivElement>(null);
+  const legendRef = React.useRef<HTMLDivElement>(null);
+  const isStackedLayout = () => window.innerWidth < 1024;
+  // Bring the top of the book (the illustration page on mobile) back into view — only ever scrolls up
+  const scrollBookIntoView = () => {
+    const el = bookRef.current;
+    if (!el || !isStackedLayout()) return;
+    const rectTop = el.getBoundingClientRect().top;
+    if (rectTop < 0) window.scrollTo({ top: rectTop + window.scrollY - 12, behavior: "smooth" });
+  };
 
   // All illustrations and hotspots are hard-coded in the data files
   const chaptersList = language === "en" ? CHAPTERS_DATA : CHAPTERS_DATA_ZH;
@@ -392,76 +409,56 @@ export default function App() {
     triggerPageTurnSound();
   };
 
-  // Mobile scroll-to-bottom auto-page turner listener
+  // Mobile: after every page turn, return to the illustration at the top of the book
+  const didMountTurnRef = React.useRef(false);
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-    let timeoutId: NodeJS.Timeout;
-    let isTransitioning = false;
+    if (!didMountTurnRef.current) {
+      didMountTurnRef.current = true;
+      return;
+    }
+    scrollBookIntoView();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChapterIndex, activePageIndex, showDirectory]);
 
-    const handleScroll = () => {
-      // Only active on mobile/tablet viewports where pages stack vertically (width < 1024)
-      if (window.innerWidth >= 1024 || isFilmOpen) {
-        setShowAutoTurnHint(false);
-        return;
-      }
+  // Mobile: keep the active chapter tab centred in the horizontal tab strip
+  useEffect(() => {
+    const strip = tabsRef.current;
+    const active = strip?.querySelector<HTMLElement>('[data-active="true"]');
+    if (!strip || !active || strip.scrollWidth <= strip.clientWidth) return;
+    strip.scrollTo({ left: active.offsetLeft - strip.clientWidth / 2 + active.offsetWidth / 2, behavior: "smooth" });
+  }, [activeChapterIndex, showDirectory, language, isOpen]);
 
-      // Check window scroll position
-      const totalHeight = document.documentElement.scrollHeight;
-      const scrollPosition = window.innerHeight + window.scrollY;
-      
-      // Allow some tolerance (e.g. 25px from bottom)
-      const reachedBottom = scrollPosition >= totalHeight - 25;
+  // Mobile: horizontal swipe on the book turns the page (vertical scrolling is untouched)
+  const swipeRef = React.useRef<{ x: number; y: number; t: number } | null>(null);
+  const handleBookTouchStart = (e: React.TouchEvent) => {
+    swipeRef.current = null;
+    if (!isStackedLayout() || isFilmOpen || e.touches.length !== 1) return;
+    if ((e.target as HTMLElement).closest("video, input, textarea, [data-no-swipe]")) return;
+    const t = e.touches[0];
+    swipeRef.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+  };
+  const handleBookTouchEnd = (e: React.TouchEvent) => {
+    const start = swipeRef.current;
+    swipeRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Date.now() - start.t > 700 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    if (window.getSelection()?.toString()) return; // the reader was selecting text
+    if (dx < 0) handleNextPage();
+    else handlePrevPage();
+  };
 
-      if (reachedBottom && !isTransitioning) {
-        // Double-check if there's actually a next page to turn to
-        const currentChapter = chaptersList[activeChapterIndex];
-        const hasNext = activePageIndex < currentChapter.pages.length - 1 || activeChapterIndex < chaptersList.length - 1;
-        
-        if (hasNext) {
-          setShowAutoTurnHint(true);
-          
-          // Let's reset progress and animate down to 0 over 1.5 seconds
-          setAutoTurnProgress(100);
-          const duration = 1500;
-          const step = 50; // update every 50ms
-          let elapsed = 0;
-
-          clearInterval(intervalId);
-          intervalId = setInterval(() => {
-            elapsed += step;
-            const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
-            setAutoTurnProgress(remaining);
-            if (elapsed >= duration) {
-              clearInterval(intervalId);
-            }
-          }, step);
-
-          clearTimeout(timeoutId);
-          timeoutId = setTimeout(() => {
-            isTransitioning = true;
-            handleNextPage();
-            // Scroll back to top smoothly for the new chapter/page
-            setTimeout(() => {
-              window.scrollTo({ top: 0, behavior: "smooth" });
-              setShowAutoTurnHint(false);
-              isTransitioning = false;
-            }, 100);
-          }, duration);
-        }
-      } else {
-        setShowAutoTurnHint(false);
-        clearInterval(intervalId);
-        clearTimeout(timeoutId);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      clearInterval(intervalId);
-      clearTimeout(timeoutId);
-    };
-  }, [activeChapterIndex, activePageIndex, chaptersList, handleNextPage, isFilmOpen]);
+  // Where "next" leads to — used by the mobile reading bar and the end-of-page card
+  const nextTarget = showDirectory
+    ? { ch: 0, p: 0 }
+    : activePageIndexNormalized < activeChapter.pages.length - 1
+      ? { ch: activeChapterIndex, p: activePageIndexNormalized + 1 }
+      : activeChapterIndex < chaptersList.length - 1
+        ? { ch: activeChapterIndex + 1, p: 0 }
+        : null;
+  const nextTargetPage = nextTarget ? chaptersList[nextTarget.ch].pages[nextTarget.p] : null;
 
   // Ask Gemini to translate the chapter's paragraphs dynamically
   const handleTranslatePage = async (style: "old-english" | "skaldic-verse" | "chronicle") => {
@@ -669,7 +666,7 @@ export default function App() {
       </header>
 
       {/* Ribbon Tabs for smaller screens */}
-      <div className="xl:hidden w-full max-w-5xl mx-auto px-4 mt-4 flex justify-start sm:justify-center overflow-x-auto py-1 z-30 relative scrollbar-none">
+      <div ref={tabsRef} className="xl:hidden w-full max-w-5xl mx-auto px-4 mt-4 flex justify-start sm:justify-center overflow-x-auto py-1 z-30 relative scrollbar-none overscroll-x-contain">
         <div className="flex items-center gap-0.5 p-1 rounded-full ring-1 ring-chrome-line/15 bg-chrome-surface backdrop-blur-sm shrink-0">
           {[{ key: "index", label: isZh ? "目录" : "Index", active: showDirectory, onClick: () => { setShowDirectory(true); triggerPageTurnSound(); } },
             ...chaptersList.map((ch, idx) => ({ key: ch.id, label: shortLabels[idx] ?? ch.englishTitle, active: !showDirectory && idx === activeChapterIndex, onClick: () => selectChapter(idx) }))
@@ -677,7 +674,8 @@ export default function App() {
             <button
               key={tab.key}
               onClick={tab.onClick}
-              className={`h-7 px-3 rounded-full text-[12px] whitespace-nowrap transition-colors duration-300 cursor-pointer ${isZh ? "font-zh-serif tracking-[0.1em]" : "font-serif"} ${
+              data-active={tab.active}
+              className={`h-8 lg:h-7 px-3.5 lg:px-3 rounded-full text-[12px] whitespace-nowrap transition-colors duration-300 cursor-pointer ${isZh ? "font-zh-serif tracking-[0.1em]" : "font-serif"} ${
                 tab.active ? "bg-chrome text-chrome-bg font-semibold" : "text-chrome/55 hover:text-chrome"
               }`}
             >
@@ -696,7 +694,7 @@ export default function App() {
           {/* Left page-turn handle */}
           <button
             onClick={handlePrevPage}
-            className="absolute -left-4 sm:-left-6 md:-left-9 lg:-left-14 top-1/2 -translate-y-1/2 z-40 group grid place-items-center w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-chrome-surface backdrop-blur-md ring-1 ring-chrome-line/25 shadow-[0_6px_16px_-8px_rgba(0,0,0,0.35)] transition-[background-color,box-shadow,transform] duration-300 ease-out hover:bg-chrome-surface-strong hover:ring-chrome-line/55 active:scale-95 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-gilt"
+            className="absolute -left-4 sm:-left-6 md:-left-9 lg:-left-14 top-1/2 -translate-y-1/2 z-40 group hidden lg:grid place-items-center w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-chrome-surface backdrop-blur-md ring-1 ring-chrome-line/25 shadow-[0_6px_16px_-8px_rgba(0,0,0,0.35)] transition-[background-color,box-shadow,transform] duration-300 ease-out hover:bg-chrome-surface-strong hover:ring-chrome-line/55 active:scale-95 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-gilt"
             title={UI_TRANSLATIONS[language].prevFolio}
             aria-label={UI_TRANSLATIONS[language].prevFolio}
           >
@@ -706,7 +704,7 @@ export default function App() {
           {/* Right page-turn handle */}
           <button
             onClick={handleNextPage}
-            className="absolute -right-4 sm:-right-6 md:-right-9 lg:-right-14 top-1/2 -translate-y-1/2 z-40 group grid place-items-center w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-chrome-surface backdrop-blur-md ring-1 ring-chrome-line/25 shadow-[0_6px_16px_-8px_rgba(0,0,0,0.35)] transition-[background-color,box-shadow,transform] duration-300 ease-out hover:bg-chrome-surface-strong hover:ring-chrome-line/55 active:scale-95 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-gilt"
+            className="absolute -right-4 sm:-right-6 md:-right-9 lg:-right-14 top-1/2 -translate-y-1/2 z-40 group hidden lg:grid place-items-center w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-chrome-surface backdrop-blur-md ring-1 ring-chrome-line/25 shadow-[0_6px_16px_-8px_rgba(0,0,0,0.35)] transition-[background-color,box-shadow,transform] duration-300 ease-out hover:bg-chrome-surface-strong hover:ring-chrome-line/55 active:scale-95 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-gilt"
             title={UI_TRANSLATIONS[language].nextFolio}
             aria-label={UI_TRANSLATIONS[language].nextFolio}
           >
@@ -714,7 +712,12 @@ export default function App() {
           </button>
 
           {/* Book Pages Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-0 relative rounded-[14px] md:rounded-[16px] overflow-hidden bg-transparent lg:bg-parchment">
+          <div
+            ref={bookRef}
+            onTouchStart={handleBookTouchStart}
+            onTouchEnd={handleBookTouchEnd}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-0 relative rounded-[14px] md:rounded-[16px] overflow-hidden bg-transparent lg:bg-parchment scroll-mt-3"
+          >
             {/* LEFT PAGE: Historical Chronicle Text or Interactive Timeline Map */}
             {showDirectory ? (
               <div className="left-page-immersive rounded-xl lg:rounded-l-2xl lg:rounded-r-none p-6 sm:p-8 md:p-10 lg:p-11 flex flex-col justify-between min-h-[480px] sm:min-h-[550px] lg:h-[700px] relative overflow-hidden">
@@ -749,7 +752,7 @@ export default function App() {
                   </div>
 
                   {/* Directory Scroll Area */}
-                  <div className="relative flex-1 overflow-y-auto max-h-[360px] sm:max-h-[440px] md:max-h-[470px] lg:max-h-[480px] pr-2 min-h-[300px]">
+                  <div className="relative flex-1 lg:overflow-y-auto lg:max-h-[480px] lg:pr-2 lg:min-h-[300px]">
                     <div className="space-y-5">
                       {chaptersList.map((ch, chIdx) => (
                         <div key={ch.id}>
@@ -869,6 +872,20 @@ export default function App() {
                       onFocus={setExpansionFocus}
                       intro={activePage.paragraphs[0]}
                     />
+                  ) : activePage.isArchOverview ? (
+                    /* ================== LEFT PAGE ARCHITECTURE CHANGES ================== */
+                    <ArchLeftPage language={language} era={archEra} onEraChange={setArchEra} spot={archSpot} onSpot={setArchSpot} />
+                  ) : activePage.isDietOverview ? (
+                    /* ================== LEFT PAGE DIET CHANGES ================== */
+                    <DietLeftPage language={language} era={dietEra} onEraChange={setDietEra} food={dietFood} onFood={setDietFood} />
+                  ) : activePage.isFigureGraph ? (
+                    /* ================== LEFT PAGE KEY FIGURES DETAIL ================== */
+                    <FigureLeftPage
+                      language={language}
+                      focusId={figureFocus}
+                      onFocus={setFigureFocus}
+                      intro={activePage.paragraphs[0]}
+                    />
                   ) : activePage.isTimelineComponent ? (
                     /* ================== LEFT PAGE TIMELINE INTERACTIVE INTERFACE ================== */
                     <div className="w-full flex-1 flex flex-col justify-between h-full relative z-10" id="timeline-interactive-module">
@@ -886,7 +903,7 @@ export default function App() {
                       </div>
 
                       {/* Main vertical scrollable timeline area */}
-                      <div className="relative flex-1 overflow-y-auto max-h-[260px] sm:max-h-[380px] md:max-h-[440px] pr-2 min-h-[200px] sm:min-h-[280px]" id="chronicle-scroll-area">
+                      <div className="relative flex-1 lg:overflow-y-auto lg:max-h-[440px] pr-2 lg:min-h-[280px]" id="chronicle-scroll-area">
                         {/* Fine gilt spine linking the era seals */}
                         <div className="absolute left-[29px] top-4 bottom-4 w-px bg-gradient-to-b from-transparent via-gilt/45 to-transparent z-0" />
 
@@ -958,7 +975,10 @@ export default function App() {
                                           return (
                                             <button
                                               key={idx}
-                                              onClick={() => setSelectedTimelineEvent(event)}
+                                              onClick={() => {
+                                                setSelectedTimelineEvent(event);
+                                                scrollBookIntoView();
+                                              }}
                                               className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors duration-300 flex items-baseline gap-3 group/item cursor-pointer ${
                                                 isEventSelected ? "bg-white/55 ring-1 ring-gilt/40" : "hover:bg-ink/[0.04]"
                                               }`}
@@ -1026,7 +1046,7 @@ export default function App() {
                           </p>
 
                           {/* Scrollable paragraph content container to guarantee same height */}
-                          <div className="overflow-y-auto max-h-[260px] sm:max-h-[340px] md:max-h-[380px] pr-2 select-text">
+                          <div className="lg:overflow-y-auto lg:max-h-[380px] lg:pr-2 select-text">
                             <div className={`space-y-4 font-serif text-[15px] sm:text-[15.5px] lg:text-[16px] text-ink/90 ${isZh ? "leading-[1.95] tracking-[0.02em]" : "leading-[1.75]"}`}>
                               {activePage.paragraphs.map((p, idx) => (
                                 <p key={idx} className={`text-justify ${idx === 0 ? `first-letter:float-left first-letter:text-[3.2em] first-letter:leading-[0.82] first-letter:mr-2.5 first-letter:mt-1 first-letter:text-oxblood ${isZh ? "first-letter:font-zh-serif first-letter:font-bold" : "first-letter:font-gothic"}` : ""}`}>
@@ -1051,7 +1071,7 @@ export default function App() {
 
             {/* RIGHT PAGE with 3D Turn Animation around the spine */}
             {showDirectory ? (
-              <div className="right-page-immersive rounded-xl lg:rounded-r-2xl lg:rounded-l-none p-6 sm:p-8 md:p-10 lg:p-11 flex flex-col justify-between min-h-[480px] sm:min-h-[550px] lg:h-[700px] relative overflow-hidden">
+              <div className="order-first lg:order-none right-page-immersive rounded-xl lg:rounded-r-2xl lg:rounded-l-none p-6 sm:p-8 md:p-10 lg:p-11 flex flex-col justify-between min-h-[480px] sm:min-h-[550px] lg:h-[700px] relative overflow-hidden">
                 <PageFrame />
 
                 {/* Viking Longship Watermark */}
@@ -1097,7 +1117,7 @@ export default function App() {
 
               </div>
             ) : (
-              <div className="relative overflow-hidden rounded-xl lg:rounded-r-2xl lg:rounded-l-none" style={{ perspective: 1200 }}>
+              <div className="order-first lg:order-none relative overflow-hidden rounded-xl lg:rounded-r-2xl lg:rounded-l-none" style={{ perspective: 1200 }}>
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={`${activeChapterIndex}-${activePageIndex}`}
@@ -1171,6 +1191,15 @@ export default function App() {
                       focus={expansionFocus}
                       onFocus={setExpansionFocus}
                     />
+                  ) : activePage.isArchOverview ? (
+                    /* ================== RIGHT PAGE ARCHITECTURE DIAGRAM ================== */
+                    <ArchDiagramPanel language={language} era={archEra} onEraChange={setArchEra} spot={archSpot} onSpot={setArchSpot} />
+                  ) : activePage.isDietOverview ? (
+                    /* ================== RIGHT PAGE COMMON FOODS ================== */
+                    <DietFoodPanel language={language} era={dietEra} onEraChange={setDietEra} food={dietFood} onFood={setDietFood} />
+                  ) : activePage.isFigureGraph ? (
+                    /* ================== RIGHT PAGE KEY FIGURES GRAPH ================== */
+                    <FigureGraphPanel language={language} focusId={figureFocus} onFocus={setFigureFocus} />
                   ) : activePage.isTimelineComponent ? (
                     /* ================== CHAPTER 2 TIMELINE EVENT DETAIL DISPLAY ================== */
                     (() => {
@@ -1247,7 +1276,7 @@ export default function App() {
                               </div>
 
                               {/* Detailed Content */}
-                              <div className="overflow-y-auto h-[110px] sm:h-[140px] md:h-[150px] lg:h-[165px] xl:h-[185px] pr-2 select-text">
+                              <div className="lg:overflow-y-auto lg:h-[165px] xl:h-[185px] lg:pr-2 select-text">
                                 <span className={`${labelFont} block mb-1.5 text-[9px] text-ink-soft/60`}>
                                   {isZh ? "ᛟ 史实与人物" : "ᛟ Analysis & Characters"}
                                 </span>
@@ -1301,11 +1330,17 @@ export default function App() {
                                   style={{ left: `${h.x}%`, top: `${h.y}%` }}
                                 >
                                   <button
-                                    onClick={() => setSelectedHotspot(h)}
+                                    onClick={() => {
+                                      setSelectedHotspot(h);
+                                      if (isStackedLayout()) {
+                                        requestAnimationFrame(() => legendRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+                                      }
+                                    }}
                                     title={isZh ? ((h as any).nameZh || h.name) : h.name}
-                                    className="group/hs relative flex items-center justify-center w-7 h-7 -ml-3.5 -mt-3.5 focus:outline-none cursor-pointer"
+                                    aria-label={isZh ? ((h as any).nameZh || h.name) : h.name}
+                                    className="group/hs relative flex items-center justify-center w-11 h-11 -ml-[22px] -mt-[22px] lg:w-7 lg:h-7 lg:-ml-3.5 lg:-mt-3.5 focus:outline-none cursor-pointer"
                                   >
-                                    {!isActive && <span className="pulse-circle -inset-1" />}
+                                    {!isActive && <span className="pulse-circle inset-1 lg:-inset-1" />}
                                     <span
                                       className={`relative z-10 rounded-full transition-all duration-300 shadow-[0_2px_6px_rgba(0,0,0,0.5)] ${
                                         isActive
@@ -1322,7 +1357,7 @@ export default function App() {
                       </div>
 
                       {/* Dynamic Legend / Explanation display box below image */}
-                      <div className="mt-4 pt-4 border-t border-ink/10 h-[104px] sm:h-[112px] relative z-10 w-full">
+                      <div ref={legendRef} className="mt-4 pt-4 border-t border-ink/10 min-h-[104px] sm:min-h-[112px] lg:min-h-0 lg:h-[112px] relative z-10 w-full scroll-mb-28">
                         <AnimatePresence mode="wait">
                           {selectedHotspot ? (
                             <motion.div
@@ -1352,7 +1387,7 @@ export default function App() {
                               key="no-selection"
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
-                              className="flex flex-col items-center justify-center text-center h-full gap-2"
+                              className="flex flex-col items-center justify-center text-center h-full min-h-[88px] gap-2"
                             >
                               <Compass strokeWidth={1} className="w-5 h-5 text-gilt" />
                               <p className="font-serif italic text-[12px] leading-relaxed text-ink-soft/70 max-w-[300px]">
@@ -1389,58 +1424,92 @@ export default function App() {
         </div>
       </main>
 
-      {/* Mobile Auto Page Turn Floating Notification */}
-      <AnimatePresence>
-        {showAutoTurnHint && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            onClick={() => {
-              // Immediate manual turn on click
-              handleNextPage();
-              window.scrollTo({ top: 0, behavior: "smooth" });
-              setShowAutoTurnHint(false);
-            }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-black/60 backdrop-blur-md ring-1 ring-gilt/30 pl-3 pr-5 py-2.5 rounded-full shadow-[0_16px_36px_-12px_rgba(0,0,0,0.7)] cursor-pointer select-none active:scale-95 transition-transform"
+      {/* Mobile: end-of-page "continue reading" card */}
+      {nextTarget && nextTargetPage && (
+        <div className="lg:hidden w-full max-w-5xl mx-auto px-3 sm:px-6 -mt-1 relative z-10">
+          <button
+            onClick={handleNextPage}
+            className="group w-full flex items-center gap-4 p-4 rounded-2xl bg-chrome-surface ring-1 ring-chrome-line/20 backdrop-blur-sm text-left active:scale-[0.99] transition-transform cursor-pointer"
           >
-            {/* Visual Progress Spinner Ring */}
-            <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="10"
-                  cy="10"
-                  r="8"
-                  className="stroke-[#3a2c1b]"
-                  strokeWidth="2"
-                  fill="none"
-                />
-                <circle
-                  cx="10"
-                  cy="10"
-                  r="8"
-                  className="stroke-[#dbbe8b]"
-                  strokeWidth="2"
-                  fill="none"
-                  strokeDasharray="50.24"
-                  strokeDashoffset={50.24 * (autoTurnProgress / 100)}
-                />
-              </svg>
-              <span className="absolute text-[8px] font-mono text-[#dbbe8b] font-bold">
-                {Math.ceil((autoTurnProgress / 100) * 2)}
+            <span className="w-14 h-14 rounded-xl overflow-hidden shrink-0 ring-1 ring-chrome-line/20 bg-stone-900">
+              {nextTargetPage.image ? (
+                <img src={asset(nextTargetPage.image)} alt="" loading="lazy" className="w-full h-full object-cover" />
+              ) : (
+                <span className="w-full h-full grid place-items-center bg-parchment font-mono text-xl text-oxblood/80">ᛟ</span>
+              )}
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className={`block text-[10px] text-chrome/50 ${isZh ? "font-zh-serif tracking-[0.2em]" : "font-display uppercase tracking-[0.22em]"}`}>
+                {isZh ? "继续阅读" : "Continue reading"} · {ROMAN[nextTarget.ch]}
               </span>
+              <span className={`block mt-1 truncate text-[15px] text-chrome ${isZh ? "font-zh-serif font-semibold tracking-[0.04em]" : "font-serif font-semibold"}`}>
+                {nextTargetPage.title}
+              </span>
+            </span>
+            <ChevronRight strokeWidth={1.5} className="w-5 h-5 text-chrome/60 shrink-0 transition-transform group-active:translate-x-0.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Mobile: spacer so the fixed reading bar never covers content */}
+      <div className="lg:hidden shrink-0 h-[calc(88px+env(safe-area-inset-bottom))]" aria-hidden="true" />
+
+      {/* Mobile: fixed bottom reading bar */}
+      <AnimatePresence>
+        {!isFilmOpen && (
+          <motion.nav
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:hidden fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pointer-events-none"
+          >
+            <div className="pointer-events-auto mx-auto max-w-md h-14 flex items-center gap-1 px-1.5 rounded-full bg-[#1c140c]/80 backdrop-blur-xl ring-1 ring-gilt/25 shadow-[0_18px_40px_-14px_rgba(0,0,0,0.75)]">
+              <button
+                onClick={handlePrevPage}
+                disabled={showDirectory}
+                aria-label={UI_TRANSLATIONS[language].prevFolio}
+                className="w-11 h-11 grid place-items-center rounded-full text-gilt-soft/80 active:bg-white/10 disabled:opacity-25 transition-colors cursor-pointer"
+              >
+                <ChevronLeft strokeWidth={1.5} className="w-5 h-5" />
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowDirectory(!showDirectory);
+                  triggerPageTurnSound();
+                }}
+                className="flex-1 min-w-0 h-11 flex flex-col items-center justify-center rounded-full active:bg-white/10 transition-colors cursor-pointer"
+              >
+                <span className={`max-w-full truncate px-2 text-[12px] text-parchment ${isZh ? "font-zh-serif tracking-[0.12em]" : "font-serif"}`}>
+                  {showDirectory
+                    ? (isZh ? "全书总目" : "Table of Contents")
+                    : `${ROMAN[activeChapterIndex]} · ${shortLabels[activeChapterIndex] ?? activeChapter.englishTitle}`}
+                </span>
+                {showDirectory ? (
+                  <span className="mt-1 text-[9px] tracking-[0.2em] text-gilt-soft/50">{isZh ? "轻触返回阅读" : "Tap to resume"}</span>
+                ) : (
+                  <span className="mt-1.5 flex items-center gap-1">
+                    {activeChapter.pages.map((p, i) => (
+                      <span
+                        key={p.id}
+                        className={`h-[3px] rounded-full transition-all duration-300 ${i === activePageIndexNormalized ? "w-4 bg-gilt-soft" : "w-1.5 bg-gilt-soft/30"}`}
+                      />
+                    ))}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={handleNextPage}
+                disabled={!nextTarget}
+                aria-label={UI_TRANSLATIONS[language].nextFolio}
+                className="w-11 h-11 grid place-items-center rounded-full bg-oxblood text-parchment active:brightness-110 disabled:opacity-25 disabled:bg-transparent transition-[filter,opacity] cursor-pointer"
+              >
+                <ChevronRight strokeWidth={1.5} className="w-5 h-5" />
+              </button>
             </div>
-            
-            <div className="flex flex-col gap-1">
-              <span className="text-[12px] font-serif font-semibold text-parchment leading-none">
-                {isZh ? "即将翻至下一页" : "Turning to the next folio"}
-              </span>
-              <span className="text-[10px] text-gilt-soft/60 leading-none">
-                {isZh ? "轻触立即翻页" : "Tap to turn now"}
-              </span>
-            </div>
-          </motion.div>
+          </motion.nav>
         )}
       </AnimatePresence>
     </div>
